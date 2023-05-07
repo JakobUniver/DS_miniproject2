@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message ReadyRequest {
+  // No field needed
+}
+
+message ReadyResponse {
+  int32 ready = 1;
+}
+
+service ReadyService {
+  rpc ServerReady(ReadyRequest) returns (ReadyResponse);
+}

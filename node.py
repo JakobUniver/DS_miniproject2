@@ -57,37 +57,34 @@ def broadcast_availability():
 
 
 @contextlib.contextmanager
-def _reserve_port():
-    socket.SO_REUSEPORT = 15
+def _reserve_port(port):
+    socket.SO_REUSEPORT = 1
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
     if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
         raise RuntimeError("Failed to set SO_REUSEPORT.")
-    sock.bind(("", 13000))
+    sock.bind(("", int(port)))
     try:
         yield sock.getsockname()[1]
     finally:
         sock.close()
 
+
 def _run_process(bind_address):
     print('Starting new process.')
-    options = (('grpc.so_reuseport', 1),)
+    options = [('grpc.so_reuseport', 1)]
 
     server = grpc.server(ThreadPoolExecutor(
-        max_workers=10, ),
+        max_workers=10),
         options=options)
     miniproject2_pb2_grpc.add_ReadyServiceServicer_to_server(ReadyServicer(), server)
     server.add_insecure_port(bind_address)
     server.start()
-
-    store_loop()
-
-    print("End")
     server.wait_for_termination()
 
 
 def localStorePs(threads):
-    with _reserve_port() as port:
+    with _reserve_port(MY_PORT) as port:
         bind_address = f"[::]:{port}"
         for i in range(int(threads)):
             worker = multiprocessing.Process(target=_run_process,
@@ -142,7 +139,8 @@ def store_loop():
 
 
 if __name__ == "__main__":
-    options = (('grpc.so_reuseport', 1),)
+    options = [("grpc.so_reuseport", 1),
+               ("grpc.use_local_subchannel_pool", 1)]
     server = grpc.server(ThreadPoolExecutor(max_workers=10), options=options)
     while True:
         try:
@@ -158,6 +156,7 @@ if __name__ == "__main__":
     print("Server CONNECTED to port " + port + "...")
 
     store_loop()
+    print(WORKERS)
 
     print("End")
     server.wait_for_termination()

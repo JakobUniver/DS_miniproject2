@@ -1,8 +1,8 @@
-import grpc
-import datetime
-import time
-import socket
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
+
+import grpc
+
 import miniproject2_pb2
 import miniproject2_pb2_grpc
 
@@ -10,6 +10,7 @@ ALL_PORTS = ["20048", "20049", "20050"]
 AVAILABLE_PORTS = []
 MY_PORT = ''
 MY_NAME = ''
+WORKERS = []
 
 DATA_STORES = {}
 
@@ -53,6 +54,35 @@ def broadcast_availability():
             pass
 
 
+def _run_process(bind_address):
+    print('Starting new process.')
+    options = (('grpc.so_reuseport', 1),)
+
+    server = grpc.server(ThreadPoolExecutor(
+        max_workers=5, ),
+        options=options)
+    miniproject2_pb2_grpc.add_ReadyServiceServicer_to_server(ReadyServicer(), server)
+    server.add_insecure_port(bind_address)
+    server.start()
+
+    store_loop()
+
+    print("End")
+    server.wait_for_termination()
+
+
+def localStorePs(threads):
+    for worker in WORKERS:
+        worker.join()
+        with MY_PORT as port:
+            bind_address = f"[::]:{port}"
+            for _ in range(int(threads)):
+                worker = multiprocessing.Process(target=_run_process,
+                                                 args=(bind_address,))
+                worker.start()
+                WORKERS.append(worker)
+
+
 def store_loop():
     global MY_NAME
     print("Making myself available to peers:")
@@ -67,7 +97,7 @@ def store_loop():
         args = input(f"{MY_NAME}> ").split(' ')
         command = args[0]
         if command == 'Local-store-ps':
-            pass
+            localStorePs(args[1])
         elif command == 'Create-chain':
             pass
         elif command == 'List-chain':
@@ -88,6 +118,9 @@ def store_loop():
             pass
         elif command == 'list-ports':
             print(AVAILABLE_PORTS)
+        elif command == 'stop':
+            print("Goodbye!")
+            break
         else:
             print("Command not available, try again")
 
@@ -108,6 +141,9 @@ if __name__ == "__main__":
     print("Server CONNECTED to port " + port + "...")
 
     store_loop()
+
+    for worker in WORKERS:
+        worker.join()
 
     print("End")
     server.wait_for_termination()

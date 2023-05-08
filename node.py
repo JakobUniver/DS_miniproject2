@@ -1,59 +1,70 @@
-import sys
-
 import grpc
 import datetime
 import time
+import socket
 from concurrent.futures import ThreadPoolExecutor
 import miniproject2_pb2
 import miniproject2_pb2_grpc
 
-PORTS = ["20048", "20049", "20050"]
+ALL_PORTS = ["20048", "20049", "20050"]
+AVAILABLE_PORTS = []
 MY_PORT = ''
-MY_ROLE = ''
+MY_NAME = ''
+
+DATA_STORES = {}
+
+
+def get_name(port):
+    return "Node-" + str(int(port) - 20047)
 
 
 class ReadyClient:
     def __init__(self, channel):
         self.stub = miniproject2_pb2_grpc.ReadyServiceStub(channel)
 
-    def server_ready(self):
-        request = miniproject2_pb2.ReadyRequest()
+    def server_ready(self, newport):
+        request = miniproject2_pb2.ReadyRequest(newport=newport)
         response = self.stub.ServerReady(request)
         return response.ready
 
 
 class ReadyServicer(miniproject2_pb2_grpc.ReadyServiceServicer):
     def ServerReady(self, request, context):
+        new_port = request.newport
+        AVAILABLE_PORTS.append(new_port)
         response = miniproject2_pb2.ReadyResponse()
         response.ready = 1
         return response
 
 
-def servers_ready():
-    global PORTS
+def broadcast_availability():
+    global ALL_PORTS, AVAILABLE_PORTS
 
     #### TIMESYNC
-    try:
-        for port in PORTS:
+    for port in ALL_PORTS:
+        try:
             with grpc.insecure_channel(f'localhost:{port}') as channel:
-                client = ReadyClient(channel)
-                response = client.server_ready()
-    except grpc.RpcError as e:
-        print("Trying to contact peers again!")
+                if port != MY_PORT:
+                    client = ReadyClient(channel)
+                    response = client.server_ready(newport=MY_PORT)
+                print(f"Connected with {port}")
+                AVAILABLE_PORTS.append(port)
+        except grpc.RpcError as e:
+            pass
 
 
 def store_loop():
-    global MY_ROLE
-    print("Contacting peers!")
-    servers_ready()
-    print("All clients online!")
+    global MY_NAME
+    print("Making myself available to peers:")
+    broadcast_availability()
+    print("Broadcast end")
 
-    MY_ROLE = "Node-" + str(int(MY_PORT) - 20047)
+    MY_NAME = get_name(MY_PORT)
 
     # time.sleep(1)
 
     while True:
-        args = input(f"{MY_ROLE}> ").split(' ')
+        args = input(f"{MY_NAME}> ").split(' ')
         command = args[0]
         if command == 'Local-store-ps':
             pass
@@ -75,6 +86,8 @@ def store_loop():
             pass
         elif command == 'Restore-head':
             pass
+        elif command == 'list-ports':
+            print(AVAILABLE_PORTS)
         else:
             print("Command not available, try again")
 
@@ -85,7 +98,6 @@ if __name__ == "__main__":
         try:
             port = input("Insert server port: ")
             server.add_insecure_port("[::]:" + port)
-            PORTS.remove(port)
             MY_PORT = port
             break
         except:

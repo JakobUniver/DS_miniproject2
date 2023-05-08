@@ -1,3 +1,5 @@
+import sys
+
 import grpc
 import datetime
 import time
@@ -7,7 +9,7 @@ import miniproject2_pb2_grpc
 
 PORTS = ["20048", "20049", "20050"]
 MY_PORT = ''
-MASTER_PORT = '20048'
+MY_ROLE = ''
 
 
 class ReadyClient:
@@ -40,6 +42,43 @@ def servers_ready():
         print("Trying to contact peers again!")
 
 
+def store_loop():
+    global MY_ROLE
+    print("Contacting peers!")
+    servers_ready()
+    print("All clients online!")
+
+    MY_ROLE = "Node-" + str(int(MY_PORT) - 20047)
+
+    # time.sleep(1)
+
+    while True:
+        args = input(f"{MY_ROLE}> ").split(' ')
+        command = args[0]
+        if command == 'Local-store-ps':
+            pass
+        elif command == 'Create-chain':
+            pass
+        elif command == 'List-chain':
+            pass
+        elif command == 'Write-operation':
+            pass
+        elif command == 'List-books':
+            pass
+        elif command == 'Read-operation':
+            pass
+        elif command == 'Time-out':
+            pass
+        elif command == 'Data-status':
+            pass
+        elif command == 'Remove-head':
+            pass
+        elif command == 'Restore-head':
+            pass
+        else:
+            print("Command not available, try again")
+
+
 if __name__ == "__main__":
     server = grpc.server(ThreadPoolExecutor(max_workers=5))
     while True:
@@ -56,7 +95,7 @@ if __name__ == "__main__":
     server.start()
     print("Server CONNECTED to port " + port + "...")
 
-    # store_loop()
+    store_loop()
 
     print("End")
     server.wait_for_termination()

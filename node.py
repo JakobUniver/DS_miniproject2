@@ -1,5 +1,7 @@
+import contextlib
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
+import socket
 
 import grpc
 
@@ -10,7 +12,7 @@ ALL_PORTS = ["20048", "20049", "20050"]
 AVAILABLE_PORTS = []
 MY_PORT = ''
 MY_NAME = ''
-WORKERS = []
+WORKERS = {}
 
 DATA_STORES = {}
 
@@ -54,12 +56,25 @@ def broadcast_availability():
             pass
 
 
+@contextlib.contextmanager
+def _reserve_port():
+    socket.SO_REUSEPORT = 15
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
+        raise RuntimeError("Failed to set SO_REUSEPORT.")
+    sock.bind(("", 13000))
+    try:
+        yield sock.getsockname()[1]
+    finally:
+        sock.close()
+
 def _run_process(bind_address):
     print('Starting new process.')
     options = (('grpc.so_reuseport', 1),)
 
     server = grpc.server(ThreadPoolExecutor(
-        max_workers=5, ),
+        max_workers=10, ),
         options=options)
     miniproject2_pb2_grpc.add_ReadyServiceServicer_to_server(ReadyServicer(), server)
     server.add_insecure_port(bind_address)
@@ -72,15 +87,16 @@ def _run_process(bind_address):
 
 
 def localStorePs(threads):
-    for worker in WORKERS:
-        worker.join()
-        with MY_PORT as port:
-            bind_address = f"[::]:{port}"
-            for _ in range(int(threads)):
-                worker = multiprocessing.Process(target=_run_process,
-                                                 args=(bind_address,))
-                worker.start()
-                WORKERS.append(worker)
+    with _reserve_port() as port:
+        bind_address = f"[::]:{port}"
+        for i in range(int(threads)):
+            worker = multiprocessing.Process(target=_run_process,
+                                             args=(bind_address,))
+            worker.start()
+            WORKERS[MY_NAME + "-ps" + str(i + 1)] = worker
+
+        for worker in WORKERS.values():
+            worker.join()
 
 
 def store_loop():
@@ -126,7 +142,8 @@ def store_loop():
 
 
 if __name__ == "__main__":
-    server = grpc.server(ThreadPoolExecutor(max_workers=5))
+    options = (('grpc.so_reuseport', 1),)
+    server = grpc.server(ThreadPoolExecutor(max_workers=10), options=options)
     while True:
         try:
             port = input("Insert server port: ")
@@ -141,9 +158,6 @@ if __name__ == "__main__":
     print("Server CONNECTED to port " + port + "...")
 
     store_loop()
-
-    for worker in WORKERS:
-        worker.join()
 
     print("End")
     server.wait_for_termination()

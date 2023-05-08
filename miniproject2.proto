@@ -11,3 +11,24 @@ message ReadyResponse {
 service ReadyService {
   rpc ServerReady(ReadyRequest) returns (ReadyResponse);
 }
+
+message ProcessesRequest {
+  //Empty
+}
+
+message ProcessesResponse {
+  int32 pnumber = 1;
+}
+
+message PassChainRequest {
+  repeated string chain = 1;
+}
+
+message PassChainResponse {
+  bool success = 1;
+}
+
+service ChainService {
+  rpc GetProcesses(ProcessesRequest) returns (ProcessesResponse);
+  rpc PassChain(PassChainRequest) returns (PassChainResponse);
+}

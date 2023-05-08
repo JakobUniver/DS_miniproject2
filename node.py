@@ -1,5 +1,6 @@
 import contextlib
 import multiprocessing
+import random
 from concurrent.futures import ThreadPoolExecutor
 import socket
 
@@ -14,7 +15,7 @@ MY_PORT = ''
 MY_NAME = ''
 WORKERS = {}
 
-DATA_STORES = {}
+CHAIN = []
 
 
 def get_name(port):
@@ -37,6 +38,36 @@ class ReadyServicer(miniproject2_pb2_grpc.ReadyServiceServicer):
         AVAILABLE_PORTS.append(new_port)
         response = miniproject2_pb2.ReadyResponse()
         response.ready = 1
+        return response
+
+
+class ChainClient:
+    def __init__(self, channel):
+        self.stub = miniproject2_pb2_grpc.ChainServiceStub(channel)
+
+    def get_processes(self):
+        request = miniproject2_pb2.ProcessesRequest()
+        response = self.stub.GetProcesses(request)
+        return response.pnumber
+
+    def pass_chain(self, chain):
+        request = miniproject2_pb2.PassChainRequest(chain=chain)
+        response = self.stub.PassChain(request)
+        return response.success
+
+
+class ChainServicer(miniproject2_pb2_grpc.ChainServiceServicer):
+
+    def GetProcesses(self, request, context):
+        response = miniproject2_pb2.ProcessesResponse()
+        response.pnumber = len(WORKERS)
+        return response
+
+    def PassChain(self, request, context):
+        global CHAIN
+        CHAIN = request.chain
+        response = miniproject2_pb2.PassChainResponse()
+        response.success = True
         return response
 
 
@@ -96,9 +127,30 @@ def localStorePs(threads):
             worker.join()
 
 
+def createChain():
+    all_workers = []
+    for port in AVAILABLE_PORTS:
+        with grpc.insecure_channel(f'localhost:{port}') as channel:
+            client = ChainClient(channel)
+            processes = client.get_processes()
+            for i in range(processes):
+                all_workers.append(str(get_name(port) + '-ps' + str(i + 1)))
+
+    random.shuffle(all_workers)
+    for port in AVAILABLE_PORTS:
+        with grpc.insecure_channel(f'localhost:{port}') as channel:
+            client = ChainClient(channel)
+            passed = client.pass_chain(all_workers)
+    print(f"Chain created")
+
+
+def listChain():
+    print(CHAIN)
+
+
 def store_loop():
     global MY_NAME
-    print("Making myself available to peers:")
+    print("Broadcasting myself to peers:")
     broadcast_availability()
     print("Broadcast end")
 
@@ -112,9 +164,9 @@ def store_loop():
         if command == 'Local-store-ps':
             localStorePs(args[1])
         elif command == 'Create-chain':
-            pass
+            createChain()
         elif command == 'List-chain':
-            pass
+            listChain()
         elif command == 'Write-operation':
             pass
         elif command == 'List-books':
@@ -129,11 +181,13 @@ def store_loop():
             pass
         elif command == 'Restore-head':
             pass
-        elif command == 'list-ports':
-            print(AVAILABLE_PORTS)
-        elif command == 'stop':
+        elif command == 'List-Processes':
+            print(WORKERS)
+        elif command == 'Stop':
             print("Goodbye!")
             break
+        elif command == '':
+            pass
         else:
             print("Command not available, try again")
 
@@ -159,4 +213,4 @@ if __name__ == "__main__":
     print(WORKERS)
 
     print("End")
-    server.wait_for_termination()
+    server.stop(None)

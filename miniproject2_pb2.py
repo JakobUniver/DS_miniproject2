@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12miniproject2.proto\"\x1f\n\x0cReadyRequest\x12\x0f\n\x07newport\x18\x01 \x01(\t\"\x1e\n\rReadyResponse\x12\r\n\x05ready\x18\x01 \x01(\x05\x32<\n\x0cReadyService\x12,\n\x0bServerReady\x12\r.ReadyRequest\x1a\x0e.ReadyResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12miniproject2.proto\"\x1f\n\x0cReadyRequest\x12\x0f\n\x07newport\x18\x01 \x01(\t\"\x1e\n\rReadyResponse\x12\r\n\x05ready\x18\x01 \x01(\x05\"\x12\n\x10ProcessesRequest\"$\n\x11ProcessesResponse\x12\x0f\n\x07pnumber\x18\x01 \x01(\x05\"!\n\x10PassChainRequest\x12\r\n\x05\x63hain\x18\x01 \x03(\t\"$\n\x11PassChainResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32<\n\x0cReadyService\x12,\n\x0bServerReady\x12\r.ReadyRequest\x1a\x0e.ReadyResponse2y\n\x0c\x43hainService\x12\x35\n\x0cGetProcesses\x12\x11.ProcessesRequest\x1a\x12.ProcessesResponse\x12\x32\n\tPassChain\x12\x11.PassChainRequest\x1a\x12.PassChainResponseb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'miniproject2_pb2', globals())
@@ -24,6 +24,16 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _READYREQUEST._serialized_end=53
   _READYRESPONSE._serialized_start=55
   _READYRESPONSE._serialized_end=85
-  _READYSERVICE._serialized_start=87
-  _READYSERVICE._serialized_end=147
+  _PROCESSESREQUEST._serialized_start=87
+  _PROCESSESREQUEST._serialized_end=105
+  _PROCESSESRESPONSE._serialized_start=107
+  _PROCESSESRESPONSE._serialized_end=143
+  _PASSCHAINREQUEST._serialized_start=145
+  _PASSCHAINREQUEST._serialized_end=178
+  _PASSCHAINRESPONSE._serialized_start=180
+  _PASSCHAINRESPONSE._serialized_end=216
+  _READYSERVICE._serialized_start=218
+  _READYSERVICE._serialized_end=278
+  _CHAINSERVICE._serialized_start=280
+  _CHAINSERVICE._serialized_end=401
 # @@protoc_insertion_point(module_scope)

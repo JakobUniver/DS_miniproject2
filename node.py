@@ -206,6 +206,7 @@ if __name__ == "__main__":
             print("This port is taken, try again:")
 
     miniproject2_pb2_grpc.add_ReadyServiceServicer_to_server(ReadyServicer(), server)
+    miniproject2_pb2_grpc.add_ChainServiceServicer_to_server(ChainServicer(), server)
     server.start()
     print("Server CONNECTED to port " + port + "...")
 
